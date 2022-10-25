@@ -1,5 +1,5 @@
 ---
-sidebar_position: 2
+sidebar_position: 4
 ---
 
 # Tutorial 3 - Microphone/Midi interaction
