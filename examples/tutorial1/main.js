@@ -1,4 +1,5 @@
 import { Csound } from '@csound/browser';
+import csd from './tutorial1.csd?raw'
 import './style.css'
 
 document.querySelector('#app').innerHTML = `
@@ -17,6 +18,11 @@ const startCsound = async () => {
   console.log("Starting Csound...");
 
   csound = await Csound();
+
+  await csound.compileCsdText(csd);
+  await csound.start();
+
+  document.querySelector('#startButton').remove();
 }
 
 document.querySelector('#startButton').addEventListener('click', startCsound);
