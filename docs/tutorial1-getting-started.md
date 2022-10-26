@@ -178,6 +178,7 @@ document.querySelector('#startButton').addEventListener('click', startCsound);
 Let's now get our Csound code running!  We will use the following Csound CSD code:
 
 ```
+;; Author: Steven Yi
 <CsoundSynthesizer>
 <CsOptions>
 -o dac --port=10000
@@ -210,7 +211,7 @@ instr Main
     inote = inotes[p4 % 37 % 11 % 5] + 12 * ioct[p4 % 41 % 17 % 5]
     schedule(1, 0, .25, cpsmidinn(inote), 0.25)
 
-    if(p4 % 64 % 37 % 17 % 11 == 0) then
+    if(p4 % 64 % 37 % 17 % 11 == 0 && inote != 74 && inote != 62) then
         schedule(1, 0, .5, cpsmidinn(inote + 7), 0.125)
     endif
 
