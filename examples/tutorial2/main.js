@@ -18,7 +18,12 @@ const createPerformanceUI = (csound) => {
   `
 
   document.querySelector('#flourish').addEventListener('click', async () => {
-    await csound.readScore(`i "Flourish" 0 0 0`);
+    // await csound.readScore(`i "Flourish" 0 0 0`);
+    await csound.evalCode(`
+      print times:i()
+      print (.25 - times:i() % .25)
+      schedule("Flourish", .25 - times:i() % .25, 0, 0)
+    `)
   })
 }
 
@@ -31,8 +36,10 @@ const startCsound = async () => {
 
   csound = await Csound();
 
+  await csound.setOption("-m0");
   await csound.compileCsdText(csd);
   await csound.start();
+  csound.ev
 
   document.querySelector('#startButton').remove();
 

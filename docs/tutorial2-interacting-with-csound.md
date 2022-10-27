@@ -20,7 +20,7 @@ Finally, rename tutorial1.csd to tutorial2.csd and update the import in main.js 
 
 ## Step 2 - Triggering Score Events 
 
-Let's take the lovely generative pattern generator from tutorial1 and extend the project to make it interactive so that we can perform in realtime with the work. To start, let's a add the following gesture generating instrument to tutorial2.csd:
+Let's take the generative pattern generator from tutorial1 and extend the project to make it interactive so that we can perform in realtime with the work. Begin by adding the following gesture generating instrument to tutorial2.csd:
 
 ```csound
 instr Flourish
@@ -35,24 +35,30 @@ instr Flourish
 endin
 ```
 
+This code uses temporal recursion to schedule itself in the future and play notes with a random selection of note numbers at quieter amplitudes over time. Let's first test the code with desktop Csound then work on integrating it with our application.
+
 ### Testing on the Desktop
 
-If you want to test what this sounds like outside of the project, first run the CSD from the commandline (or use the "Csound: Play Active Document" command in VS Code). Next, create a test.orc file and put the following in the file:
+To test what this sounds like outside of the web project, first run the CSD from the commandline (or use the "Csound: Play Active Document" command in VS Code). Csound will run and listen for UDP messages on port 10000 (set in the CsOptions of the CSD) to allow us to live code and experiment with Csound code in realtime. 
+
+Next, create a test.orc file and put the following in the file:
 
 ```csound
 schedule("Flourish", 0, 0, 0)
 ```
 
-Finally, with the CSD running, open the ORC file, put the curosr on the line with the schedule call, and use cmd-enter (or ctrl-enter) in VS Code to evaluate the orchestra code. This will send the code via UDP on port 10000 (set in the CsOptions of the CSD) to csound to evalute the code and play the Flourish.
+Finally, put the cursor on the line with the schedule call and use cmd-enter (or ctrl-enter) in VS Code to evaluate the orchestra code. This will send the code via UDP to port 10000 where csound will receive the message and evalute the ORC code and play the Flourish.
+
+Csound has support for evaluating both orchestra and score code at runtime over UDP. These are are important parts of live coding for rapid development of Csound code as well as live performance.  The Csound API also exposes these capabilities for programmtic use and we will avail ourselves of these in the sections below. 
 
 ### Evaluating Csound SCO
 
-Now, we want to have this same capability and experience within our web application so that we can hit a button to trigger the Flourish. To do this, we will need to:
+We now want to have the live code same experience within our web application so that we can hit a button to trigger the Flourish. To do this, we will need to:
 
 1. Add a "Flourish" button.
 2. Set a callback to send SCO code to Csound to evaluate.
 
-To do this, we'll add the following utility function:
+To do this, we'll add the following utility function to main.js:
 
 ```js
 const createPerformanceUI = (csound) => {
@@ -74,7 +80,7 @@ and we will add the following line of code to the end of our startCsound() funct
   createPerformanceUI(csound);
 ```
 
-Now when we run the project, the user will hit start and see the start button disappear and the performance interface revealed. They can now hit the Flourish button to evaluate the Csound SCO code the runs the Flourish generator.  
+Now when we run the project, the user will hit start and see the start button disappear and the performance interface revealed. The `createPerformanceUI()` function will both create new user interface elements as well as setup callback handlers to do things like call `.readScore()` to perform Csound SCO notes.  If all is well, the user can now hit the Flourish button to evaluate the Csound SCO code that triggers the Flourish generator.  
 
 The final code in main.js at this point of the tutorial should now look like this:
 
@@ -123,15 +129,41 @@ const startCsound = async () => {
 document.querySelector('#startButton').addEventListener('click', startCsound);
 ```
 
-### About .readScore() and scheduling
+:::note About .readScore() and Scheduling 
 
-The readScore() method takes in any valid Csound SCO text and evaluates it at runtime. Start times for notes are relative to the time when Csound evaluates the code. While we are using a hardcoded SCO string, you can certainly generate any SCO you would like in JavaScript and send it to Csound.
+The readScore() method takes in Csound SCO text and evaluates it at runtime. Start times for notes are relative to the time when Csound evaluates the code. While we are using a hardcoded SCO string, you can certainly generate any SCO you would like in JavaScript and send it to Csound.
 
+When we use score like we did above, it works very well to express the idea of "play this immediately". 
 
-
-
+When we want to do things that are timed relative to other musical events occuring in Csound, we will need to use other techniques and designs to express things like "play this at the start of the next measure" or "update the looping content when the current loop ends". In those situations, it is often better to use ORC code evaluation where we can send code to be evaluated that can itself read time values within Csound and schedule precisely in time with other playing content. We will explore this below.
+:::
 
 ## Step 3 - Evaluating ORC code 
+
+While evaluating SCO at runtime can serve many use cases for events, evaluating ORC gives us additional tools. For example, if we wanted the Flourish to run in sync with the Main music generator, we would need to have have it trigger right according to the clock time of the Csound engine. 
+
+First off, we're going to want to use the JavaScript console to view Csound output to help use while we develop. If you open up the console and run the current project, you will see that it generates a lot of log output for every realtime event that gets generated. Let's first turn off those messages by using the following code in `startCsound()` right after we create Csound and before we call `compileCsdText()`:
+
+```js
+  await csound.setOption("-m0");
+```
+
+`.setOption()` allows us to set a single commandline flag; in this case, we are using the -m option with value 0 to disable messages. (If you need to set multiple options, we can call `.setOption()` multiple times.)
+
+Next, let's replace the call to `.readScore()` with `.evalCode()` to send Csound ORC code to trigger Flourish in time with the Main generator:
+
+```js
+  document.querySelector('#flourish').addEventListener('click', async () => {
+    // await csound.readScore(`i "Flourish" 0 0 0`);
+    await csound.evalCode(`
+      print times:i()
+      print (.25 - times:i() % .25)
+      schedule("Flourish", .25 - times:i() % .25, 0, 0)
+    `)
+  })
+```
+
+Now when you run the project, you should hear the Flourish performed in time with the Main generator. The ORC code reads Csound's time since the beginning of its run using the `times` opcode, then calculates the amount of time until the next .25 second boundary, and finally calls Flourish to run at that time. 
 
 ## Step 4 - Continuous Data (Channels) 
 
