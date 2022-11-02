@@ -129,20 +129,21 @@ const startCsound = async () => {
 document.querySelector('#startButton').addEventListener('click', startCsound);
 ```
 
-:::note About .readScore() and Scheduling 
+### About .readScore() and Scheduling 
 
 The readScore() method takes in Csound SCO text and evaluates it at runtime. Start times for notes are relative to the time when Csound evaluates the code. While we are using a hardcoded SCO string, you can certainly generate any SCO you would like in JavaScript and send it to Csound.
 
-When we use score like we did above, it works very well to express the idea of "play this immediately". 
+When we use score like we did above, it works very well to express the idea of "play this immediately". However, if we trigger the notes a few times we'll find that the gesture is not in-time with the Main generator.
 
-When we want to do things that are timed relative to other musical events occuring in Csound, we will need to use other techniques and designs to express things like "play this at the start of the next measure" or "update the looping content when the current loop ends". In those situations, it is often better to use ORC code evaluation where we can send code to be evaluated that can itself read time values within Csound and schedule precisely in time with other playing content. We will explore this below.
-:::
+When we want to do things that are timed relative to other musical events occuring in Csound, we will need to use other techniques and designs to express things like "play this at the start of the next measure" or "update the looping content when the current loop ends". In those situations, it may be better to use ORC code evaluation where we can send code will read time values within Csound and schedule precisely in time with other playing content. We will explore this below.
 
 ## Step 3 - Evaluating ORC code 
 
-While evaluating SCO at runtime can serve many use cases for events, evaluating ORC gives us additional tools. For example, if we wanted the Flourish to run in sync with the Main music generator, we would need to have have it trigger right according to the clock time of the Csound engine. 
+While evaluating SCO at runtime can serve many use cases for events, evaluating ORC gives us additional tools. For example, if we wanted the Flourish to run in sync with the Main music generator, we would need to have have it trigger according to the clock time of the Csound engine. 
 
-First off, we're going to want to use the JavaScript console to view Csound output to help use while we develop. If you open up the console and run the current project, you will see that it generates a lot of log output for every realtime event that gets generated. Let's first turn off those messages by using the following code in `startCsound()` right after we create Csound and before we call `compileCsdText()`:
+### Setting Options 
+
+First off, we're going to use the JavaScript console to view Csound output to help us while we develop. If you open up the console and run the current project, you will see that it generates a lot of log output for every realtime event that gets generated. Let's first turn off those messages by using the following code in `startCsound()` right after we create Csound and before we call `compileCsdText()`:
 
 ```js
   await csound.setOption("-m0");
@@ -150,20 +151,76 @@ First off, we're going to want to use the JavaScript console to view Csound outp
 
 `.setOption()` allows us to set a single commandline flag; in this case, we are using the -m option with value 0 to disable messages. (If you need to set multiple options, we can call `.setOption()` multiple times.)
 
-Next, let's replace the call to `.readScore()` with `.evalCode()` to send Csound ORC code to trigger Flourish in time with the Main generator:
+### Clocks
+
+Our application has an implicit clock that is simplistic and problematic. Our Main generator currently schedules itself to run every 0.25 beats into the future, giving us 8th note resolution at 120 BPM. Due to rounding issues, it may not always be precisely at 0.25 and the errors may gradually accumulate. The amounts might be small but when summed over time can cause things to be a little difficult for the purpose of synchronizing other events.  
+
+To synchronize new events with those running in csound--such as the ones we generate from our button callback that runs in the main thread--we will need to have some way to schedule according to the current time in the audio thread. Because Csound has relative time note processing, and beacuse of message passing latency and uncertainty on when an event is run after it is triggered, we can not depend on just reading the current time, doing calculations in the other thread, and sending that over to run. The time calculations *have* to happen in the audio thread to get precise synchronization.  
+
+So let's first add a new user-defined opcode called `next_time`:
+
+```csound
+opcode next_time, i, i
+  inext xin
+
+  itime = times:i()
+  iticks = round(itime / inext)
+  iticks += 1
+
+  iout = (iticks * inext) - itime
+  xout iout
+endop
+```
+
+This opcode will, given a subdivision of time (such as .25 beats), convert the current real time in seconds to number of subdivisions as a whole number, add 1 to get the next tick, then convert the difference between now and the time of the next subdivision tick. 
+
+This implementation for a clock and time calculations is a bit simple but it will do for this tutorial. (In a more robust application, a time keeping system that allows for variable BPM and current measure/beat reading would be ideal.) 
+
+With the new code, we will update Main and Flourish to both use next_time() when scheduling ahead in time like so:
+
+```csound
+instr Flourish
+    inotes[] fillarray 72, 74, 75, 77, 79 
+    inote = inotes[floor(rnd(5))]
+
+    schedule(1, 0, .25, cpsmidinn(inote), ampdbfs(-12 + p4 * .5))
+
+    if(p4 > -60) then
+        schedule(p1, next_time(.125), 0, p4 - 1)
+    endif
+endin
+
+instr Main
+    inotes[] fillarray 60, 67, 63, 65, 62
+    ioct[] fillarray 0,1,0,0,1
+    inote = inotes[p4 % 37 % 11 % 5] + 12 * ioct[p4 % 41 % 17 % 5]
+    schedule(1, 0, .25, cpsmidinn(inote), 0.25)
+
+    if(p4 % 64 % 37 % 17 % 11 == 0 && inote != 74 && inote != 62) then
+        schedule(1, 0, .5, cpsmidinn(inote + 7), 0.125)
+    endif
+
+    schedule(p1, next_time(.25), .25, p4 + 1)
+endin
+```
+
+With this in place, we can now move on to using ORC evaluation to synchronize our user-triggered event with the musical time of the Main score generating instrument.
+
+### Evaluating ORC Code 
+
+Let us replace the call to `.readScore()` with `.evalCode()` to send Csound ORC code to trigger Flourish in time with the Main generator:
 
 ```js
   document.querySelector('#flourish').addEventListener('click', async () => {
     // await csound.readScore(`i "Flourish" 0 0 0`);
     await csound.evalCode(`
-      print times:i()
-      print (.25 - times:i() % .25)
-      schedule("Flourish", .25 - times:i() % .25, 0, 0)
+      schedule("Flourish", next_time(.25), 0, 0)
     `)
   })
 ```
 
-Now when you run the project, you should hear the Flourish performed in time with the Main generator. The ORC code reads Csound's time since the beginning of its run using the `times` opcode, then calculates the amount of time until the next .25 second boundary, and finally calls Flourish to run at that time. 
+Now when you run the project, you should hear the Flourish performed in time with the Main generator. By sending ORC code instead of SCO code, the schedule call can use the `next_time()` UDO to calculate at evaluation time when is the next .25 time window boundary and run in sync with the Main generator.
+
 
 ## Step 4 - Continuous Data (Channels) 
 

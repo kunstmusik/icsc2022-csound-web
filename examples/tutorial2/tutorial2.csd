@@ -9,6 +9,19 @@ ksmps=64
 nchnls=2
 0dbfs=1
 
+opcode next_time, i, i
+  inext xin
+
+  itime = times:i()
+  iticks = round(itime / inext)
+  iticks += 1
+
+  iout = (iticks * inext) - itime
+;   print iout
+  xout iout
+endop
+
+
 instr 1
     ioct = octcps(p4)
     kpwm = oscili(.1, 5)
@@ -32,7 +45,7 @@ instr Flourish
     schedule(1, 0, .25, cpsmidinn(inote), ampdbfs(-12 + p4 * .5))
 
     if(p4 > -60) then
-        schedule(p1, .125, 0, p4 - 1)
+        schedule(p1, next_time(.125), 0, p4 - 1)
     endif
 endin
 
@@ -46,7 +59,7 @@ instr Main
         schedule(1, 0, .5, cpsmidinn(inote + 7), 0.125)
     endif
 
-    schedule(p1, .25, .25, p4 + 1)
+    schedule(p1, next_time(.25), .25, p4 + 1)
 endin
 
 schedule("Main", 0, 0, 0)
