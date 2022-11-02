@@ -14,6 +14,7 @@ const createPerformanceUI = (csound) => {
   document.querySelector('#app').innerHTML = `
     <div>
       <button id='flourish'>Flourish</button>
+      <input id='ampSlider' type='range' min='-60' max='-12' value='-12'/>
     </div>
   `
 
@@ -22,6 +23,10 @@ const createPerformanceUI = (csound) => {
     await csound.evalCode(`
       schedule("Flourish", next_time(.25), 0, 0)
     `)
+  })
+
+  document.querySelector('#ampSlider').addEventListener('input', async (evt) => {
+    await csound.setControlChannel('main.note.amp', evt.target.value)
   })
 }
 
@@ -36,6 +41,8 @@ const startCsound = async () => {
 
   await csound.setOption("-m0");
   await csound.compileCsdText(csd);
+
+  await csound.setControlChannel('main.note.amp', -12);
   await csound.start();
   csound.ev
 

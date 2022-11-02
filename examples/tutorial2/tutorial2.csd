@@ -17,7 +17,6 @@ opcode next_time, i, i
   iticks += 1
 
   iout = (iticks * inext) - itime
-;   print iout
   xout iout
 endop
 
@@ -50,13 +49,14 @@ instr Flourish
 endin
 
 instr Main
+    iamp = ampdbfs(chnget:i("main.note.amp"))
     inotes[] fillarray 60, 67, 63, 65, 62
     ioct[] fillarray 0,1,0,0,1
     inote = inotes[p4 % 37 % 11 % 5] + 12 * ioct[p4 % 41 % 17 % 5]
-    schedule(1, 0, .25, cpsmidinn(inote), 0.25)
+    schedule(1, 0, .25, cpsmidinn(inote), iamp)
 
     if(p4 % 64 % 37 % 17 % 11 == 0 && inote != 74 && inote != 62) then
-        schedule(1, 0, .5, cpsmidinn(inote + 7), 0.125)
+        schedule(1, 0, .5, cpsmidinn(inote + 7), iamp / 2)
     endif
 
     schedule(p1, next_time(.25), .25, p4 + 1)

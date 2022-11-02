@@ -222,5 +222,99 @@ Let us replace the call to `.readScore()` with `.evalCode()` to send Csound ORC 
 Now when you run the project, you should hear the Flourish performed in time with the Main generator. By sending ORC code instead of SCO code, the schedule call can use the `next_time()` UDO to calculate at evaluation time when is the next .25 time window boundary and run in sync with the Main generator.
 
 
-## Step 4 - Continuous Data (Channels) 
+## Step 4 - Writing Continuous Data (Channels) 
+
+`.readScore()` and `.evalCode()` are primary tools for event-based interactivity with Csound. To work with continuous data, we will use Csound's channel system to communicate with Csound.
+
+Let's say we want to make the amplitude of the notes that the Main generator be something we can control from the web interface using a slider. To do this we will need to:
+
+1. Add a slider UI element that will send new values to Csound via a channel whenever it changes. 
+2. Update our Csound code to read the value from the channel.
+3. Be sure we initialize the channel with a good starting value. 
+
+### Adding a Slider
+
+Let's update our `createPerformanceGUI()` function to add a slider and add an input event listener so that we can update Csound when the slider value changes. Modify your code to look like the following:
+
+```js
+const createPerformanceUI = (csound) => {
+  document.querySelector('#app').innerHTML = `
+    <div>
+      <button id='flourish'>Flourish</button>
+      <input id='ampSlider' type='range' min='-60' max='-12' value='-12'/>
+    </div>
+  `
+
+  document.querySelector('#flourish').addEventListener('click', async () => {
+    // await csound.readScore(`i "Flourish" 0 0 0`);
+    await csound.evalCode(`
+      schedule("Flourish", next_time(.25), 0, 0)
+    `)
+  })
+
+  document.querySelector('#ampSlider').addEventListener('input', async (evt) => {
+    await csound.setControlChannel('main.note.amp', evt.target.value)
+  })
+}
+```
+
+We're using here an input of type range and an ID of ampSlider. The min is set to -60 and max to -12 and a default value of -12. We are going to read these values as dbFS in our Csound code. 
+
+When an input event is fired, we get the `evt.target.value` to get the current value from the slider and use the `.setControlChannel()` method on the Csound object to set the `main.note.amp` channel with the given value.  
+
+### Update Csound code to use channel value
+
+Next, let's update the Csound code for Main so that it uses the 'main.note.amp' channel value for the notes. We originally used an amplitude of 0.25 (roughly -12 dbFS) for the main notes and 0.125 (or half the main amplitude) for the secondary fifths. 
+
+Update the Main instrument in tutorial2.csd to look as the following:
+
+
+```csound
+instr Main
+    iamp = ampdbfs(chnget:i("main.note.amp"))
+    inotes[] fillarray 60, 67, 63, 65, 62
+    ioct[] fillarray 0,1,0,0,1
+    inote = inotes[p4 % 37 % 11 % 5] + 12 * ioct[p4 % 41 % 17 % 5]
+    schedule(1, 0, .25, cpsmidinn(inote), iamp)
+
+    if(p4 % 64 % 37 % 17 % 11 == 0 && inote != 74 && inote != 62) then
+        schedule(1, 0, .5, cpsmidinn(inote + 7), iamp / 2)
+    endif
+
+    schedule(p1, next_time(.25), .25, p4 + 1)
+endin
+```
+
+We're now using `chnget:i()` to read the value set in the 'main.note.amp' channel as an i-rate variable, and converting that from dBFS to amplitude using `ampdbfs()`. After we have the amplitude value, we now use it for the schedule calls, using the same half-amplitude for the the perfect fifths.
+
+### Initializing the Channel
+
+If you were to run this project now, however, you will find that the generator will produce very loud clipped notes. This is because channels default to the value of 0 if no value has been set, and 0 dBFS is certainly a lot louder than the -12 dBFS we were expecting!
+
+To deal with this, we will initialize the channel to a known good value prior to starting Csound. Update your `startCsound()` code to add a call to `.setControlChannel()` like so:
+
+```js
+const startCsound = async () => {
+  if(csound) {
+    return;
+  }
+
+  console.log("Starting Csound...");
+
+  csound = await Csound();
+
+  await csound.setOption("-m0");
+  await csound.compileCsdText(csd);
+
+  await csound.setControlChannel('main.note.amp', -12);
+  await csound.start();
+  csound.ev
+
+  document.querySelector('#startButton').remove();
+
+  createPerformanceUI(csound);
+}
+```
+
+## Step 5 - Reading Continuous Data (Channels) 
 
