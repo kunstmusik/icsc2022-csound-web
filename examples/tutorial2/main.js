@@ -15,6 +15,7 @@ const createPerformanceUI = (csound) => {
     <div>
       <button id='flourish'>Flourish</button>
       <input id='ampSlider' type='range' min='-60' max='-12' value='-12'/>
+      <p id='dbfs'></p>
     </div>
   `
 
@@ -44,11 +45,18 @@ const startCsound = async () => {
 
   await csound.setControlChannel('main.note.amp', -12);
   await csound.start();
-  csound.ev
 
   document.querySelector('#startButton').remove();
 
   createPerformanceUI(csound);
+
+  const dBFSReader = () => {
+    csound.getControlChannel('dbfs').then(v => {
+      document.querySelector('#dbfs').innerHTML = v;
+    })
+    setTimeout(dBFSReader, 1000 / 10)
+  }
+  dBFSReader();
 }
 
 document.querySelector('#startButton').addEventListener('click', startCsound);

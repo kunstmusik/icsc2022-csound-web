@@ -33,7 +33,8 @@ instr 1
 
     asig *= linsegr:a(1, p3, 1, .5, 0)
 
-    out(asig, asig)
+    chnmix(asig, "master1")
+    chnmix(asig, "master2")
 
 endin
 
@@ -63,6 +64,29 @@ instr Main
 endin
 
 schedule("Main", 0, 0, 0)
+
+
+instr Mixer
+  a1 = chnget:a("master1")
+  a2 = chnget:a("master2")
+
+  ar1, ar2 reverbsc a1, a2, 0.9, 12000 
+
+  a1 += ar1 * 0.25
+  a2 += ar2 * 0.25
+
+  kamp = rms(a1)
+  kdbfs = dbfsamp(kamp)
+  chnset(kdbfs, "dbfs")
+
+  out(a1, a2)
+
+
+  chnclear("master1", "master2")
+
+endin 
+
+schedule("Mixer", 0, -1)
 
 </CsInstruments>
 </CsoundSynthesizer>

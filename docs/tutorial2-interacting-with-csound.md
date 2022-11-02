@@ -318,3 +318,97 @@ const startCsound = async () => {
 
 ## Step 5 - Reading Continuous Data (Channels) 
 
+Finally, let's say we want to read some values from Csound. We can use `.getControlChannel()` to read values that we set in Csound code. For example, let's say we want to know the current amplitude in dBFS for our Csound audio. We'll need to:
+
+1. Add a mixer instrument to render audio output audio as well as measure the dBFS value for the signal and write the value to a channel.
+2. In the JS side, have a timer that periodically reads the channel from from Csound and updates the UI.
+
+### Add a Mixer Instrument
+
+Let's update instr 1 to mix its audio to audio rate channels named "master1" and "master2".  Remove the line with outs() and use:
+
+```csound
+    chnmix(asig, "master1")
+    chnmix(asig, "master2")
+```
+
+Next, lets add a Mixer instrument that:
+
+1. Reads audio from "master1" and "master2"
+2. Applies reverb using `reverbsc`
+3. Measures the RMS of the sign, converts it to dBFS, and write it out to a channel called "dbfs".
+4. Sends out the final signal to the the soundcard using `outs()`.
+5. Clear the audio channels to prevent accumulation.
+
+Add the following code to your tutorial2.csd:
+
+```csound
+instr Mixer
+  a1 = chnget:a("master1")
+  a2 = chnget:a("master2")
+
+  ar1, ar2 reverbsc a1, a2, 0.9, 12000 
+
+  a1 += ar1 * 0.25
+  a2 += ar2 * 0.25
+
+  kamp = rms(a1)
+  kdbfs = dbfsamp(kamp)
+  chnset(kdbfs, "dbfs")
+
+  out(a1, a2)
+
+  chnclear("master1", "master2")
+
+endin 
+
+schedule("Mixer", 0, -1)
+```
+
+### Reading channel values
+
+Now that we have Csound writing out the amplitude in dBFS to a channel, lets now read it and report it to the user.  To do this we will need:
+
+1. A place in the DOM to show the value
+2. A repeating function that will read values from Csound and update the UI.
+
+First, let's add a p tag to our UI that we will use to display the dBFS value for our audio signal. Update `createPerformanceUI()` to add the p tag like so:
+
+```js
+const createPerformanceUI = (csound) => {
+  document.querySelector('#app').innerHTML = `
+    <div>
+      <button id='flourish'>Flourish</button>
+      <input id='ampSlider' type='range' min='-60' max='-12' value='-12'/>
+      <p id='dbfs'></p>
+    </div>
+  `
+  ...
+```
+
+
+Now, update the UI to show the dBFS value, we will use a temporal recursion function using setTimeout() that we will define within the `startCsound()` function. After the line with `createPerformanceUI(csound);` but before the final `}`, insert the following code:
+
+```js
+  const dBFSReader = () => {
+    csound.getControlChannel('dbfs').then(v => {
+      document.querySelector('#dbfs').innerHTML = v;
+    })
+    setTimeout(dBFSReader, 1000 / 10)
+  }
+  dBFSReader();
+```
+
+The call to `csound.getControlChannel()` returns a Promise that we can define a then-callback to perform an operation once the value is retrieved and the Promise is resolved. Our callback here simply finds the p tag with ID 'dbfs' and write the control channel value as the innerHTML contents. 
+
+It's not pretty and wouldn't be great for real-world usage, but it is enough to show the technique! As the CsoundObj API returns Promises, it gives us the flexibility to use .then() or use async/await.  
+
+:::note 
+
+The CsoundObj API uses Promises as return values for almost all API functions. The various backend implementations have the WebAssembly Csound instance often in other threads (in the AudioWorklet thread or a separate web worker). Using Promises gives us the ability to perform an operation, wait for it to go across threads and back again, and get notified when a return value is ready. 
+
+:::
+
+## Conclusion
+
+In this tutorial we added interactivity to our web application using three primary techniques: reading score, evaluating orchestra code, and writing/reading control channels. Hopefully by going through this tutorial you have gained insight into the process of developing and transforming your Csound projects into interactive web programs. 
