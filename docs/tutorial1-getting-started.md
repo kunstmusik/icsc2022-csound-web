@@ -247,6 +247,24 @@ Next, will will have Csound load the CSD and play the CSD. Modify the startCsoun
 
 Now when you press the button you should hear the CSD playing in the browser and the button has disappeared.  
 
+## Step 4 - Building the Application
+
+Up until now we've been running the web application with a test web server and hot reloading. Now let's go to the terminal and run:
+
+```
+npm run build
+```
+
+This will run vite to bundle and minify our JavaScript and CSS code and output a self-contained web application in the dist folder. You can run:
+
+```
+npm run preview
+```
+
+to test serving the built output. 
+
+The dist folder can now be deployed and served on a hosting site (such as Github Pages). For more information and examples of how to deploy to common hosting sites, see Vite's documentation on ["Deploying a Static Site"](https://vitejs.dev/guide/static-deploy.html).
+
 
 ## Summary
 
