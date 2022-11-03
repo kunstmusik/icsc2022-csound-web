@@ -27,6 +27,24 @@ Before we get going on tutorials, be sure to have the following installed.
 
 We will also be installing additional libraries and tools as we go through the tutorials. 
 
+## Useful Links
+
+* [WebAudio Csound Documentation](https://www.npmjs.com/package/@csound/browser) - Documentation for the WebAudio Csound API. The latest documentation for each version is always published with each release to NPM. 
+
+## WebAudio Csound Projects
+
+Project that you might look at for inspiration:
+
+* [Csound Web-IDE](https://ide.csound.com) - The online Csound Web IDE. ([Github Project](https://github.com/csound/web-ide)).
+
+* [csound-live-code](https://live.csound.com) - Online live coding environment using Steven Yi's csound-live-code system. ([Github Project](https://github.com/kunstmusik/csound-live-code))
+
+* [webaudio-csound-samples-example](https://kunstmusik.github.io/webaudio-csound-samples-example/) - Example using FS and Csound project that loads audio samples. ([Github Project](https://github.com/kunstmusik/webaudio-csound-samples-example))
+
+* [gamepad-csound-web](https://github.com/kunstmusik/gamepad-csound-web) - Example using Gamepad API and Webaudio Csound. ([Github Project](https://github.com/kunstmusik/gamepad-csound-web))
+
+* [learn-synthesis](https://kunstmusik.github.io/learn-synthesis/) - Learning site for various synthesis methods. ([Github Project](https://github.com/kunstmusik/learn-synthesis))
+
 <!-- ## Generate a new site
 
 Generate a new Docusaurus site using the **classic template**.
