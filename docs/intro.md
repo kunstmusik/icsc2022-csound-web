@@ -9,7 +9,12 @@ Welcome to Csound on the Web! In this tutorial we will learn the essentials of u
 
 ## About WebAudio Csound
 
+WebAudio Csound is a JavaScript and TypeScript library for using Csound in browser-based applications. It provides various backend architecture designs that implement the CsoundObj API. The CsoundObj API allows users to work primarily with Csound first without requiring deep knowledge of WebAudio, Workers, and WebAssembly, yet still offer the ability to access lower-level features for more advanced use cases.
 
+<p align="center" width="100%">
+    <img src="/img/WebAudioCsound.drawio.png"></img>
+    <p><b>CsoundObj Backend Architectures</b></p>
+</p>
 
 ## Getting Started
 
@@ -44,32 +49,3 @@ Project that you might look at for inspiration:
 * [gamepad-csound-web](https://github.com/kunstmusik/gamepad-csound-web) - Example using Gamepad API and Webaudio Csound. ([Github Project](https://github.com/kunstmusik/gamepad-csound-web))
 
 * [learn-synthesis](https://kunstmusik.github.io/learn-synthesis/) - Learning site for various synthesis methods. ([Github Project](https://github.com/kunstmusik/learn-synthesis))
-
-<!-- ## Generate a new site
-
-Generate a new Docusaurus site using the **classic template**.
-
-The classic template will automatically be added to your project after you run the command:
-
-```bash
-npm init docusaurus@latest my-website classic
-```
-
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
-
-The command also installs all necessary dependencies you need to run Docusaurus.
-
-## Start your site
-
-Run the development server:
-
-```bash
-cd my-website
-npm run start
-```
-
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
-
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
-
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes. -->
