@@ -12,7 +12,7 @@ Welcome to Csound on the Web! In this tutorial we will learn the essentials of u
 WebAudio Csound is a JavaScript and TypeScript library for using Csound in browser-based applications. It provides various backend architecture designs that implement the CsoundObj API. The CsoundObj API allows users to work primarily with Csound first without requiring deep knowledge of WebAudio, Workers, and WebAssembly, yet still offer the ability to access lower-level features for more advanced use cases.
 
 <p align="center" width="100%">
-    <img src="/img/WebAudioCsound.drawio.png"></img>
+    <img src="img/WebAudioCsound.drawio.png"></img>
     <p><b>CsoundObj Backend Architectures</b></p>
 </p>
 
